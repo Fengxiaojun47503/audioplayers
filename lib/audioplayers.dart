@@ -46,22 +46,19 @@ class AudioPlayer {
         ..setMethodCallHandler(platformCallHandler);
 
   static final _uuid = new Uuid();
+  static AudioPlayer _instance;
 
   final StreamController<AudioPlayerState> _playerStateController =
       new StreamController.broadcast();
 
-
   final StreamController<Duration> _positionController =
       new StreamController.broadcast();
-
 
   final StreamController<Duration> _durationController =
       new StreamController.broadcast();
 
-
   final StreamController<void> _completionController =
       new StreamController.broadcast();
-
 
   final StreamController<String> _errorController =
       new StreamController.broadcast();
@@ -102,6 +99,7 @@ class AudioPlayer {
   TimeChangeHandler durationHandler;
 
   @deprecated
+
   /// This handler updates the current position of the audio. You can use it to make a progress bar, for instance.
   TimeChangeHandler positionHandler;
 
@@ -125,8 +123,15 @@ class AudioPlayer {
   /// It's used to route messages via the single channel properly.
   String playerId;
 
+  factory AudioPlayer() {
+    if (_instance == null) {
+      _instance = AudioPlayer._AudioPlayer();
+    }
+    return _instance;
+  }
+
   /// Creates a new instance and assigns it with a new random unique id.
-  AudioPlayer() {
+  AudioPlayer._AudioPlayer() {
     playerId = _uuid.v4();
     players[playerId] = this;
   }
