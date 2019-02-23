@@ -57,6 +57,9 @@ class AudioPlayer {
   final StreamController<Duration> _durationController =
       new StreamController.broadcast();
 
+  final StreamController<void> _seekCompletionController =
+  new StreamController.broadcast();
+
   final StreamController<void> _completionController =
       new StreamController.broadcast();
 
@@ -110,6 +113,8 @@ class AudioPlayer {
   ///
   /// It does not fire when you interrupt the audio with pause or stop.
   Stream<void> get onPlayerCompletion => _completionController.stream;
+
+  Stream<void> get onPlayerSeekCompletion => _seekCompletionController.stream;
   @deprecated
   VoidCallback completionHandler;
 
@@ -231,6 +236,10 @@ class AudioPlayer {
     return _invokeMethod('setUrl', {'url': url, 'isLocal': isLocal});
   }
 
+  Future<void> setSpeed(double speed) {
+    return _invokeMethod('setSpeed', {'speed': speed,});
+  }
+
   static void _log(String param) {
     if (logEnabled) {
       print(param);
@@ -245,7 +254,7 @@ class AudioPlayer {
     switch (call.method) {
       case 'audio.onDuration':
         Duration newDuration = new Duration(milliseconds: value);
-        player._positionController.add(newDuration);
+        player._durationController.add(newDuration);
         if (player.durationHandler != null) {
           player.durationHandler(newDuration);
         }
@@ -256,6 +265,9 @@ class AudioPlayer {
         if (player.positionHandler != null) {
           player.positionHandler(newDuration);
         }
+        break;
+      case 'audio.onSeekComplete':
+        player._seekCompletionController.add(null);
         break;
       case 'audio.onComplete':
         player.state = AudioPlayerState.COMPLETED;

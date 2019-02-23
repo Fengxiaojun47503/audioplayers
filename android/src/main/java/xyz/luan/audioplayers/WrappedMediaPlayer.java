@@ -1,5 +1,6 @@
 package xyz.luan.audioplayers;
 
+import android.annotation.TargetApi;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.AudioAttributes;
@@ -17,7 +18,8 @@ import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 
-public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener, MediaPlayer.OnCompletionListener {
+public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
+        MediaPlayer.OnCompletionListener, MediaPlayer.OnSeekCompleteListener {
 
     private String playerId;
 
@@ -180,6 +182,13 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener, Media
         return this.releaseMode;
     }
 
+    @TargetApi(23)
+    public void setSpeed(float speed) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            player.setPlaybackParams(player.getPlaybackParams().setSpeed(speed));
+        }
+    }
+
     @Override
     public void onPrepared(final MediaPlayer mediaPlayer) {
         this.prepared = true;
@@ -191,6 +200,11 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener, Media
             this.player.seekTo((int) (this.shouldSeekTo * 1000));
             this.shouldSeekTo = -1;
         }
+    }
+
+    @Override
+    public void onSeekComplete(MediaPlayer mp) {
+        ref.handleSeekCompletion(this);
     }
 
     @Override
@@ -219,6 +233,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener, Media
         MediaPlayer player = new MediaPlayer();
         player.setOnPreparedListener(this);
         player.setOnCompletionListener(this);
+        player.setOnSeekCompleteListener(this);
         setAttributes(player);
         player.setVolume((float) volume, (float) volume);
         player.setLooping(this.releaseMode == ReleaseMode.LOOP);

@@ -99,6 +99,11 @@ public class AudioplayersPlugin implements MethodCallHandler {
                 player.setReleaseMode(releaseMode);
                 break;
             }
+            case "setSpeed": {
+                final float speed = ((Double)(call.argument("speed"))).floatValue();
+                player.setSpeed(speed);
+                break;
+            }
             default: {
                 response.notImplemented();
                 return;
@@ -120,6 +125,10 @@ public class AudioplayersPlugin implements MethodCallHandler {
 
     public void handleCompletion(WrappedMediaPlayer player) {
         channel.invokeMethod("audio.onComplete", buildArguments(player.getPlayerId(), true));
+    }
+
+    public void handleSeekCompletion(WrappedMediaPlayer player) {
+        channel.invokeMethod("audio.onSeekComplete", buildArguments(player.getPlayerId(), true));
     }
 
     private void startPositionUpdates() {
