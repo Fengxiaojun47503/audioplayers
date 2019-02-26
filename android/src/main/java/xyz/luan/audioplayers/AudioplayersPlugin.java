@@ -114,15 +114,20 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
     }
 
     @Override
-    public void onPlay(WrappedMediaPlayer player) {}
-
-    @Override
-    public void onDurationUpdate(WrappedMediaPlayer player, int duration) {
-        channel.invokeMethod("audio.onDuration", buildArguments(player.getPlayerId(), duration));
+    public void onStart(WrappedMediaPlayer player) {
     }
 
     @Override
-    public void onPositionUpdate(WrappedMediaPlayer player, int position) {
+    public void onPause(WrappedMediaPlayer player) {
+    }
+
+    @Override
+    public void onStop(WrappedMediaPlayer player) {
+    }
+
+    @Override
+    public void onProgressUpdate(WrappedMediaPlayer player, int duration, int position) {
+        channel.invokeMethod("audio.onDuration", buildArguments(player.getPlayerId(), duration));
         channel.invokeMethod(
                 "audio.onCurrentPosition", buildArguments(player.getPlayerId(), position));
     }

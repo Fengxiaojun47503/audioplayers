@@ -8,9 +8,13 @@ import android.content.Context;
 public interface AudioView {
     Context getApplicationContext();
 
-    void onPlay(WrappedMediaPlayer player);
-    void onDurationUpdate(WrappedMediaPlayer player, int duration);
-    void onPositionUpdate(WrappedMediaPlayer player, int position);
+    void onStart(WrappedMediaPlayer player);
+    void onPause(WrappedMediaPlayer player);
+    void onStop(WrappedMediaPlayer player);
+
     void onComplete(WrappedMediaPlayer player);
+
+    void onProgressUpdate(WrappedMediaPlayer player, int duration, int position);
+
     void onSeekComplete(WrappedMediaPlayer player);
 }

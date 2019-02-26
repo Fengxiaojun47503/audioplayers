@@ -22,6 +22,8 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     private final static String TAG = WrappedMediaPlayer.class.getSimpleName();
 
     public final static String AUDIO_SERVICE_ACTION = "xyz.luan.audioplayers.action.START_SERVICE";
+    public final static String EXTRA_PLAYER_ID = "xyz.luan.audioplayers.extra.PLAYER_ID";
+    public final static String EXTRA_COMMAND = "xyz.luan.audioplayers.extra.COMMAND";
 
     private String playerId;
 
@@ -53,8 +55,9 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
                 sMediaPlayers.put(playerId, player);
 
                 Context context = audioView.getApplicationContext();
-                Intent intent =
-                        new Intent(AUDIO_SERVICE_ACTION).setPackage(context.getPackageName());
+                Intent intent = new Intent(AUDIO_SERVICE_ACTION)
+                                        .setPackage(context.getPackageName())
+                                        .putExtra(EXTRA_PLAYER_ID, playerId);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     context.startForegroundService(intent);
                 } else {
@@ -116,8 +119,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
                     final int time = player.getCurrentPosition();
                     for (AudioView view : views) {
                         if (null != view) {
-                            view.onDurationUpdate(player, duration);
-                            view.onPositionUpdate(player, time);
+                            view.onProgressUpdate(player, duration, time);
                         }
                     }
                 }
@@ -199,7 +201,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
                 if (!views.isEmpty()) {
                     for (AudioView view : views) {
                         if (null != view) {
-                            view.onPlay(this);
+                            view.onStart(this);
                         }
                     }
                     startPositionUpdates();
@@ -222,6 +224,19 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         } else {
             this.release();
         }
+
+        Set<AudioView> views;
+        synchronized (sLock) {
+            views = new HashSet<>(audioViews.keySet());
+        }
+
+        if (!views.isEmpty()) {
+            for (AudioView view : views) {
+                if (null != view) {
+                    view.onStop(this);
+                }
+            }
+        }
     }
 
     public void release() {
@@ -231,6 +246,19 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
 
         if (this.playing) {
             this.player.stop();
+
+            Set<AudioView> views;
+            synchronized (sLock) {
+                views = new HashSet<>(audioViews.keySet());
+            }
+
+            if (!views.isEmpty()) {
+                for (AudioView view : views) {
+                    if (null != view) {
+                        view.onStop(this);
+                    }
+                }
+            }
         }
         this.player.reset();
         this.player.release();
@@ -245,6 +273,19 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         if (this.playing) {
             this.playing = false;
             this.player.pause();
+
+            Set<AudioView> views;
+            synchronized (sLock) {
+                views = new HashSet<>(audioViews.keySet());
+            }
+
+            if (!views.isEmpty()) {
+                for (AudioView view : views) {
+                    if (null != view) {
+                        view.onPause(this);
+                    }
+                }
+            }
         }
     }
 
@@ -312,7 +353,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
             if (!views.isEmpty()) {
                 for (AudioView view : views) {
                     if (null != view) {
-                        view.onPlay(this);
+                        view.onStart(this);
                     }
                 }
                 startPositionUpdates();
