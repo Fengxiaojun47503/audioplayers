@@ -1,13 +1,12 @@
 package xyz.luan.audioplayers;
 
 import android.annotation.TargetApi;
-import android.content.Context;
-import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Handler;
+import android.text.TextUtils;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -53,18 +52,14 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
             if (null == player) {
                 player = new WrappedMediaPlayer(audioView, playerId);
                 sMediaPlayers.put(playerId, player);
-
-                Context context = audioView.getApplicationContext();
-                Intent intent = new Intent(AUDIO_SERVICE_ACTION)
-                                        .setPackage(context.getPackageName())
-                                        .putExtra(EXTRA_PLAYER_ID, playerId);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent);
-                } else {
-                    context.startService(intent);
-                }
             } else {
                 player.audioViews.put(audioView, Boolean.TRUE);
+                if (!TextUtils.isEmpty(player.url)) {
+                    audioView.onSourceSet(player, player.url);
+                }
+                if (player.isActuallyPlaying()) {
+                    audioView.onStart(player);
+                }
             }
         }
         return player;

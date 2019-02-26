@@ -1,6 +1,8 @@
 package xyz.luan.audioplayers;
 
 import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,6 +13,9 @@ import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
+
+import static xyz.luan.audioplayers.WrappedMediaPlayer.AUDIO_SERVICE_ACTION;
+import static xyz.luan.audioplayers.WrappedMediaPlayer.EXTRA_PLAYER_ID;
 
 public class AudioplayersPlugin implements MethodCallHandler, AudioView {
     private static final Logger LOGGER =
@@ -115,6 +120,15 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
 
     @Override
     public void onStart(WrappedMediaPlayer player) {
+        Context context = getApplicationContext();
+        Intent intent = new Intent(AUDIO_SERVICE_ACTION)
+                .setPackage(context.getPackageName())
+                .putExtra(EXTRA_PLAYER_ID, player.getPlayerId());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent);
+        } else {
+            context.startService(intent);
+        }
     }
 
     @Override
