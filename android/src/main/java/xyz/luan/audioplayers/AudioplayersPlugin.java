@@ -139,6 +139,10 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
     public void onStop(WrappedMediaPlayer player) {
     }
 
+    public void handleSeekCompletion(WrappedMediaPlayer player) {
+        channel.invokeMethod("audio.onSeekComplete", buildArguments(player.getPlayerId(), player.getCurrentPosition()));
+    }
+
     @Override
     public void onSourceSet(WrappedMediaPlayer player, String source) {
     }

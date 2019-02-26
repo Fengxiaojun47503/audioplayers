@@ -35,6 +35,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     private boolean playing = false;
 
     private double shouldSeekTo = -1;
+    private float speed = -1;
 
     private MediaPlayer player;
     private WeakHashMap<AudioView, Boolean> audioViews = new WeakHashMap<>(2);
@@ -343,7 +344,12 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     @TargetApi(23)
     public void setSpeed(float speed) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            player.setPlaybackParams(player.getPlaybackParams().setSpeed(speed));
+            if(prepared){
+                player.setPlaybackParams(player.getPlaybackParams().setSpeed(speed));
+                this.speed = -1;
+            } else {
+                this.speed = speed;
+            }
         }
     }
 
@@ -370,6 +376,9 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         if (this.shouldSeekTo >= 0) {
             this.player.seekTo((int) (this.shouldSeekTo * 1000));
             this.shouldSeekTo = -1;
+        }
+        if(this.speed > 0){
+            setSpeed(this.speed);
         }
     }
 
