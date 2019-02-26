@@ -154,6 +154,19 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
             this.player.setVolume((float) volume, (float) volume);
             this.player.setLooping(this.releaseMode == ReleaseMode.LOOP);
             this.player.prepareAsync();
+
+            Set<AudioView> views;
+            synchronized (sLock) {
+                views = new HashSet<>(audioViews.keySet());
+            }
+
+            if (!views.isEmpty()) {
+                for (AudioView view : views) {
+                    if (null != view) {
+                        view.onSourceSet(this, url);
+                    }
+                }
+            }
         }
     }
 

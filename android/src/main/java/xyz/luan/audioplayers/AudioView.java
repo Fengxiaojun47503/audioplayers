@@ -11,6 +11,7 @@ public interface AudioView {
     void onStart(WrappedMediaPlayer player);
     void onPause(WrappedMediaPlayer player);
     void onStop(WrappedMediaPlayer player);
+    void onSourceSet(WrappedMediaPlayer player, String source);
 
     void onComplete(WrappedMediaPlayer player);
 
