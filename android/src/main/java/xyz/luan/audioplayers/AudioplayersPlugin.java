@@ -20,6 +20,9 @@ import static xyz.luan.audioplayers.WrappedMediaPlayer.EXTRA_PLAYER_ID;
 public class AudioplayersPlugin implements MethodCallHandler, AudioView {
     private static final Logger LOGGER =
             Logger.getLogger(AudioplayersPlugin.class.getCanonicalName());
+    private static final int STATE_PAUSE = -1;
+    private static final int STATE_PLAY = -2;
+    private static final int STATE_STOP = -3;
 
     private final MethodChannel channel;
     private final Context context;
@@ -120,6 +123,7 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
 
     @Override
     public void onStart(WrappedMediaPlayer player) {
+        channel.invokeMethod("audio.onDuration", buildArguments(player.getPlayerId(), STATE_PLAY));
         Context context = getApplicationContext();
         Intent intent = new Intent(AUDIO_SERVICE_ACTION)
                 .setPackage(context.getPackageName())
@@ -133,10 +137,12 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
 
     @Override
     public void onPause(WrappedMediaPlayer player) {
+        channel.invokeMethod("audio.onDuration", buildArguments(player.getPlayerId(), STATE_PAUSE));
     }
 
     @Override
     public void onStop(WrappedMediaPlayer player) {
+        channel.invokeMethod("audio.onDuration", buildArguments(player.getPlayerId(), STATE_STOP));
     }
 
     @Override

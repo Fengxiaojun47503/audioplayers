@@ -257,10 +257,24 @@ class AudioPlayer {
     dynamic value = (call.arguments as Map)['value'];
     switch (call.method) {
       case 'audio.onDuration':
-        Duration newDuration = new Duration(milliseconds: value);
-        player._durationController.add(newDuration);
-        if (player.durationHandler != null) {
-          player.durationHandler(newDuration);
+        if (value == -1) {
+          if(player.state != AudioPlayerState.PAUSED){
+            player.state = AudioPlayerState.PAUSED;
+          }
+        } else if (value == -2) {
+          if (player.state != AudioPlayerState.PLAYING) {
+            player.state = AudioPlayerState.PLAYING;
+          }
+        }  else if (value == -3) {
+          if (player.state != AudioPlayerState.STOPPED) {
+            player.state = AudioPlayerState.STOPPED;
+          }
+        } else {
+          Duration newDuration = new Duration(milliseconds: value);
+          player._durationController.add(newDuration);
+          if (player.durationHandler != null) {
+            player.durationHandler(newDuration);
+          }
         }
         break;
       case 'audio.onCurrentPosition':
