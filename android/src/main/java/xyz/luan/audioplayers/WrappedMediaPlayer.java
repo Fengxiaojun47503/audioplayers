@@ -1,25 +1,22 @@
 package xyz.luan.audioplayers;
 
 import android.annotation.TargetApi;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
-import android.media.AudioAttributes;
 import android.os.Build;
 import android.os.Handler;
 
 import java.io.IOException;
-import java.lang.ref.WeakReference;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.Map;
-
-import io.flutter.plugin.common.MethodCall;
-import io.flutter.plugin.common.MethodChannel;
-import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
-import io.flutter.plugin.common.PluginRegistry.Registrar;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         MediaPlayer.OnCompletionListener, MediaPlayer.OnSeekCompleteListener {
+    private final static String TAG = WrappedMediaPlayer.class.getSimpleName();
 
     private String playerId;
 
@@ -34,17 +31,101 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     private double shouldSeekTo = -1;
 
     private MediaPlayer player;
-    private AudioplayersPlugin ref;
+    private WeakHashMap<AudioView, Boolean> audioViews = new WeakHashMap<>(2);
 
-    public WrappedMediaPlayer(AudioplayersPlugin ref, String playerId) {
-        this.ref = ref;
+    private static final Handler sHandler = new Handler();
+    private static Runnable sPositionUpdates;
+    private static final Object sLock = new Object();
+
+    private static final Map<String, WrappedMediaPlayer> sMediaPlayers = new HashMap<>();
+
+    public static WrappedMediaPlayer get(String playerId, AudioView audioView) {
+        WrappedMediaPlayer player;
+        synchronized (sLock) {
+            player = sMediaPlayers.get(playerId);
+            if (null == player) {
+                player = new WrappedMediaPlayer(audioView, playerId);
+                sMediaPlayers.put(playerId, player);
+            } else {
+                player.audioViews.put(audioView, Boolean.TRUE);
+            }
+        }
+        return player;
+    }
+
+    public static void destroy(String playerId, AudioView audioView) {
+        WrappedMediaPlayer player;
+        synchronized (sLock) {
+            if ((player = sMediaPlayers.get(playerId)) != null) {
+                player.audioViews.remove(audioView);
+                if (player.audioViews.isEmpty()) {
+                    sMediaPlayers.remove(playerId);
+                }
+            }
+        }
+    }
+
+    private static void startPositionUpdates() {
+        if (sPositionUpdates == null) {
+            sPositionUpdates = new UpdateCallback();
+            sHandler.post(sPositionUpdates);
+        }
+    }
+
+    private static void stopPositionUpdates() {
+        sPositionUpdates = null;
+        sHandler.removeCallbacksAndMessages(null);
+    }
+
+    private static final class UpdateCallback implements Runnable {
+        @Override
+        public void run() {
+            if (sMediaPlayers.isEmpty()) {
+                stopPositionUpdates();
+                return;
+            }
+
+            boolean nonePlaying = true;
+            for (WrappedMediaPlayer player : sMediaPlayers.values()) {
+                if (!player.isActuallyPlaying()) {
+                    continue;
+                }
+                nonePlaying = false;
+
+                Set<AudioView> views;
+                synchronized (sLock) {
+                    views = new HashSet<>(player.audioViews.keySet());
+                }
+
+                if (!views.isEmpty()) {
+                    final int duration = player.getDuration();
+                    final int time = player.getCurrentPosition();
+                    for (AudioView view : views) {
+                        if (null != view) {
+                            view.onDurationUpdate(player, duration);
+                            view.onPositionUpdate(player, time);
+                        }
+                    }
+                }
+            }
+
+            if (nonePlaying) {
+                stopPositionUpdates();
+            } else {
+                sHandler.postDelayed(this, 200);
+            }
+        }
+    }
+
+    private WrappedMediaPlayer(AudioView ref, String playerId) {
+        this.audioViews.put(ref, Boolean.TRUE);
         this.playerId = playerId;
     }
 
     public void setUrl(String url) {
         if (!objectEquals(this.url, url)) {
             this.url = url;
-            
+
             if (this.released) {
                 this.player = createPlayer();
                 this.released = false;
@@ -95,7 +176,20 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
                 this.player.prepareAsync();
             } else if (this.prepared) {
                 this.player.start();
-                this.ref.handleIsPlaying(this);
+
+                Set<AudioView> views;
+                synchronized (sLock) {
+                    views = new HashSet<>(audioViews.keySet());
+                }
+
+                if (!views.isEmpty()) {
+                    for (AudioView view : views) {
+                        if (null != view) {
+                            view.onPlay(this);
+                        }
+                    }
+                    startPositionUpdates();
+                }
             }
         }
     }
@@ -151,10 +245,11 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     // seek operations cannot be called until after
     // the player is ready.
     public void seek(double position) {
-        if (this.prepared)
+        if (this.prepared) {
             this.player.seekTo((int) (position * 1000));
-        else
+        } else {
             this.shouldSeekTo = position;
+        }
     }
 
     public int getDuration() {
@@ -194,7 +289,20 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         this.prepared = true;
         if (this.playing) {
             this.player.start();
-            ref.handleIsPlaying(this);
+
+            Set<AudioView> views;
+            synchronized (sLock) {
+                views = new HashSet<>(audioViews.keySet());
+            }
+
+            if (!views.isEmpty()) {
+                for (AudioView view : views) {
+                    if (null != view) {
+                        view.onPlay(this);
+                    }
+                }
+                startPositionUpdates();
+            }
         }
         if (this.shouldSeekTo >= 0) {
             this.player.seekTo((int) (this.shouldSeekTo * 1000));
@@ -204,7 +312,17 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
 
     @Override
     public void onSeekComplete(MediaPlayer mp) {
-        ref.handleSeekCompletion(this);
+        Set<AudioView> views;
+        synchronized (sLock) {
+            views = new HashSet<>(audioViews.keySet());
+        }
+        if (!views.isEmpty()) {
+            for (AudioView view : views) {
+                if (null != view) {
+                    view.onSeekComplete(this);
+                }
+            }
+        }
     }
 
     @Override
@@ -212,7 +330,18 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         if (releaseMode != ReleaseMode.LOOP) {
             this.stop();
         }
-        ref.handleCompletion(this);
+
+        Set<AudioView> views;
+        synchronized (sLock) {
+            views = new HashSet<>(audioViews.keySet());
+        }
+        if (!views.isEmpty()) {
+            for (AudioView view : views) {
+                if (null != view) {
+                    view.onComplete(this);
+                }
+            }
+        }
     }
 
     @SuppressWarnings("deprecation")
