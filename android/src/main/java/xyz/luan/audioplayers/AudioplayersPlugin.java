@@ -1,5 +1,7 @@
 package xyz.luan.audioplayers;
 
+import android.content.Context;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -15,14 +17,16 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
             Logger.getLogger(AudioplayersPlugin.class.getCanonicalName());
 
     private final MethodChannel channel;
+    private final Context context;
 
     public static void registerWith(final Registrar registrar) {
         final MethodChannel channel =
                 new MethodChannel(registrar.messenger(), "xyz.luan/audioplayers");
-        channel.setMethodCallHandler(new AudioplayersPlugin(channel));
+        channel.setMethodCallHandler(new AudioplayersPlugin(registrar.activeContext(), channel));
     }
 
-    private AudioplayersPlugin(final MethodChannel channel) {
+    private AudioplayersPlugin(final Context context, final MethodChannel channel) {
+        this.context = context.getApplicationContext();
         this.channel = channel;
         this.channel.setMethodCallHandler(this);
     }
@@ -102,6 +106,11 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
             }
         }
         response.success(1);
+    }
+
+    @Override
+    public Context getApplicationContext() {
+        return context;
     }
 
     @Override

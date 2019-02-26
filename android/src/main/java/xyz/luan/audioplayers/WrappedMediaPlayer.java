@@ -1,6 +1,8 @@
 package xyz.luan.audioplayers;
 
 import android.annotation.TargetApi;
+import android.content.Context;
+import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -15,8 +17,11 @@ import java.util.Set;
 import java.util.WeakHashMap;
 
 public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
-        MediaPlayer.OnCompletionListener, MediaPlayer.OnSeekCompleteListener {
+                                           MediaPlayer.OnCompletionListener,
+                                           MediaPlayer.OnSeekCompleteListener {
     private final static String TAG = WrappedMediaPlayer.class.getSimpleName();
+
+    public final static String AUDIO_SERVICE_ACTION = "xyz.luan.audioplayers.action.START_SERVICE";
 
     private String playerId;
 
@@ -46,6 +51,15 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
             if (null == player) {
                 player = new WrappedMediaPlayer(audioView, playerId);
                 sMediaPlayers.put(playerId, player);
+
+                Context context = audioView.getApplicationContext();
+                Intent intent =
+                        new Intent(AUDIO_SERVICE_ACTION).setPackage(context.getPackageName());
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent);
+                } else {
+                    context.startService(intent);
+                }
             } else {
                 player.audioViews.put(audioView, Boolean.TRUE);
             }
@@ -348,10 +362,9 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     private void setAttributes(MediaPlayer player) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             player.setAudioAttributes(new AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            );
+                                              .setUsage(AudioAttributes.USAGE_MEDIA)
+                                              .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                              .build());
         } else {
             // This method is deprecated but must be used on older devices
             player.setAudioStreamType(AudioManager.STREAM_MUSIC);
