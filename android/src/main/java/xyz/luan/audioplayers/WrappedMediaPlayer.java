@@ -134,6 +134,10 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         this.playerId = playerId;
     }
 
+    public int getAudioViewCount() {
+        return audioViews.size();
+    }
+
     public void setUrl(String url) {
         if (!objectEquals(this.url, url)) {
             this.url = url;
