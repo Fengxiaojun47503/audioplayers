@@ -139,10 +139,6 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
     public void onStop(WrappedMediaPlayer player) {
     }
 
-    public void handleSeekCompletion(WrappedMediaPlayer player) {
-        channel.invokeMethod("audio.onSeekComplete", buildArguments(player.getPlayerId(), player.getCurrentPosition()));
-    }
-
     @Override
     public void onSourceSet(WrappedMediaPlayer player, String source) {
     }
@@ -161,7 +157,7 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
 
     @Override
     public void onSeekComplete(WrappedMediaPlayer player) {
-        channel.invokeMethod("audio.onSeekComplete", buildArguments(player.getPlayerId(), true));
+        channel.invokeMethod("audio.onSeekComplete", buildArguments(player.getPlayerId(), player.getCurrentPosition()));
     }
 
     private static Map<String, Object> buildArguments(String playerId, Object value) {
