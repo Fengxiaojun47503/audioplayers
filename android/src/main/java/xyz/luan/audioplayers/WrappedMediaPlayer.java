@@ -35,7 +35,8 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     private boolean playing = false;
 
     private double shouldSeekTo = -1;
-    private float speed = -1;
+    private float speed= -1;
+    private float currentSpeed= -1;
 
     private MediaPlayer player;
     private WeakHashMap<AudioView, Boolean> audioViews = new WeakHashMap<>(2);
@@ -140,6 +141,8 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
 
     public void setUrl(String url) {
         if (!objectEquals(this.url, url)) {
+            // save current play speed in order to play new url with same speed
+            speed = currentSpeed;
             this.url = url;
 
             if (this.released) {
@@ -347,6 +350,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
 
     @TargetApi(23)
     public void setSpeed(float speed) {
+        currentSpeed = speed;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if(prepared){
                 player.setPlaybackParams(player.getPlaybackParams().setSpeed(speed));
