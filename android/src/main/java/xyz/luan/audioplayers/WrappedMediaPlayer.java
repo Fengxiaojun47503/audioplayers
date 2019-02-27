@@ -144,7 +144,6 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
             // save current play speed in order to play new url with same speed
             speed = currentSpeed;
             this.url = url;
-
             if (this.released) {
                 this.player = createPlayer();
                 this.released = false;
@@ -353,6 +352,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         currentSpeed = speed;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if(prepared){
+
                 player.setPlaybackParams(player.getPlaybackParams().setSpeed(speed));
                 this.speed = -1;
             } else {
@@ -364,6 +364,10 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     @Override
     public void onPrepared(final MediaPlayer mediaPlayer) {
         this.prepared = true;
+
+        if(this.speed > 0){
+            setSpeed(this.speed);
+        }
         if (this.playing) {
             this.player.start();
 
@@ -384,9 +388,6 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         if (this.shouldSeekTo >= 0) {
             this.player.seekTo((int) (this.shouldSeekTo * 1000));
             this.shouldSeekTo = -1;
-        }
-        if(this.speed > 0){
-            setSpeed(this.speed);
         }
     }
 
