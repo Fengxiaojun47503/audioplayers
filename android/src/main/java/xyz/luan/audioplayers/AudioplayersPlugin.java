@@ -108,6 +108,10 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
                 player.setSpeed(speed);
                 break;
             }
+            case "isSupportChangeSpeed": {
+                 response.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M);
+                return;
+            }
             default: {
                 response.notImplemented();
                 return;

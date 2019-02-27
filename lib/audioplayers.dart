@@ -240,8 +240,12 @@ class AudioPlayer {
     return _invokeMethod('setSpeed', {'speed': speed,});
   }
 
-  void setNovelId(int novelId){
 
+  Future<bool> isSupportChangeSpeed() async{
+     Map<String, dynamic> withPlayerId = Map();
+     withPlayerId['playerId'] = playerId;
+     return _channel
+         .invokeMethod('isSupportChangeSpeed', withPlayerId);
   }
 
   static void _log(String param) {
