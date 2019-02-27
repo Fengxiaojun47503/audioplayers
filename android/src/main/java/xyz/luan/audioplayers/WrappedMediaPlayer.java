@@ -16,8 +16,8 @@ import java.util.Set;
 import java.util.WeakHashMap;
 
 public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
-                                           MediaPlayer.OnCompletionListener,
-                                           MediaPlayer.OnSeekCompleteListener {
+        MediaPlayer.OnCompletionListener,
+        MediaPlayer.OnSeekCompleteListener {
     private final static String TAG = WrappedMediaPlayer.class.getSimpleName();
 
     public final static String AUDIO_SERVICE_ACTION = "xyz.luan.audioplayers.action.START_SERVICE";
@@ -35,8 +35,8 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     private boolean playing = false;
 
     private double shouldSeekTo = -1;
-    private float speed= -1;
-    private float currentSpeed= -1;
+    private float speed = -1;
+    private float currentSpeed = -1;
 
     private MediaPlayer player;
     private WeakHashMap<AudioView, Boolean> audioViews = new WeakHashMap<>(2);
@@ -351,8 +351,18 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     public void setSpeed(float speed) {
         currentSpeed = speed;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if(prepared){
-
+            if (prepared) {
+                if(!isActuallyPlaying()){
+                    playing = true;
+                    Set<AudioView> views = new HashSet<>(audioViews.keySet());
+                    if (!views.isEmpty()) {
+                        for (AudioView view : views) {
+                            if (null != view) {
+                                view.onStart(this);
+                            }
+                        }
+                    }
+                }
                 player.setPlaybackParams(player.getPlaybackParams().setSpeed(speed));
                 this.speed = -1;
             } else {
@@ -365,7 +375,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     public void onPrepared(final MediaPlayer mediaPlayer) {
         this.prepared = true;
 
-        if(this.speed > 0){
+        if (this.speed > 0) {
             setSpeed(this.speed);
         }
         if (this.playing) {
@@ -429,9 +439,9 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     private void setAttributes(MediaPlayer player) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             player.setAudioAttributes(new AudioAttributes.Builder()
-                                              .setUsage(AudioAttributes.USAGE_MEDIA)
-                                              .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                              .build());
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build());
         } else {
             // This method is deprecated but must be used on older devices
             player.setAudioStreamType(AudioManager.STREAM_MUSIC);
