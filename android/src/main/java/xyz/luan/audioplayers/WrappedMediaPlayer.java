@@ -360,6 +360,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
                             if (null != view) {
                                 view.onStart(this);
                             }
+                            startPositionUpdates();
                         }
                     }
                 }
