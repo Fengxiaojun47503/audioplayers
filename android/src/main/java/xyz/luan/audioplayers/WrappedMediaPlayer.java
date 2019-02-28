@@ -52,7 +52,15 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         synchronized (sLock) {
             player = sMediaPlayers.get(playerId);
             if (null == player) {
-                player = new WrappedMediaPlayer(audioView, playerId);
+                if(sMediaPlayers.size() == 0){
+                    player = new WrappedMediaPlayer(audioView, playerId);
+                } else {
+                   for(Map.Entry<String, WrappedMediaPlayer> entry : sMediaPlayers.entrySet()){
+                       player =  sMediaPlayers.remove(entry.getKey());
+                       player.playerId = playerId;
+                       break;
+                   }
+                }
                 sMediaPlayers.put(playerId, player);
             } else {
                 player.audioViews.put(audioView, Boolean.TRUE);

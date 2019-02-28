@@ -51,15 +51,20 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
     }
 
     private void handleMethodCall(final MethodCall call, final MethodChannel.Result response) {
-        if (TextUtils.equals("fetchExistPlayer", call.method)) {
-            String existPlayId = null;
-            for (Map.Entry<String, WrappedMediaPlayer> entry : WrappedMediaPlayer.sMediaPlayers.entrySet()) {
-                if(existPlayId == null){
-                    existPlayId = entry.getKey();
+        switch (call.method){
+            case "fetchExistPlayer":
+                String existPlayId = null;
+                for (Map.Entry<String, WrappedMediaPlayer> entry : WrappedMediaPlayer.sMediaPlayers.entrySet()) {
+                    if(existPlayId == null){
+                        existPlayId = entry.getKey();
+                    }
                 }
-            }
-            response.success(existPlayId);
-            return;
+                response.success(existPlayId);
+                return;
+            case "isSupportChangeSpeed":
+                response.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+                        !TextUtils.equals(Build.VERSION.RELEASE, "6.0.1"));
+                return;
         }
         final String playerId = call.argument("playerId");
         final WrappedMediaPlayer player = WrappedMediaPlayer.get(playerId, this);
@@ -118,10 +123,6 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
                 final float speed = ((Double) (call.argument("speed"))).floatValue();
                 player.setSpeed(speed);
                 break;
-            }
-            case "isSupportChangeSpeed": {
-                response.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M);
-                return;
             }
             default: {
                 response.notImplemented();
