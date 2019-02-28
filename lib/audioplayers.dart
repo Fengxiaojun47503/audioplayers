@@ -58,7 +58,7 @@ class AudioPlayer {
       new StreamController.broadcast();
 
   final StreamController<Duration> _seekCompletionController =
-  new StreamController.broadcast();
+      new StreamController.broadcast();
 
   final StreamController<void> _completionController =
       new StreamController.broadcast();
@@ -114,7 +114,8 @@ class AudioPlayer {
   /// It does not fire when you interrupt the audio with pause or stop.
   Stream<void> get onPlayerCompletion => _completionController.stream;
 
-  Stream<Duration> get onPlayerSeekCompletion => _seekCompletionController.stream;
+  Stream<Duration> get onPlayerSeekCompletion =>
+      _seekCompletionController.stream;
   @deprecated
   VoidCallback completionHandler;
 
@@ -130,6 +131,7 @@ class AudioPlayer {
 
   factory AudioPlayer() {
     if (_instance == null) {
+      debugPrint(" current player size: ${players.length}");
       _instance = AudioPlayer._AudioPlayer();
     }
     return _instance;
@@ -137,8 +139,20 @@ class AudioPlayer {
 
   /// Creates a new instance and assigns it with a new random unique id.
   AudioPlayer._AudioPlayer() {
-    playerId = _uuid.v4();
-    players[playerId] = this;
+    _channel
+        .invokeMethod(
+      "fetchExistPlayer",
+    )
+        .then((result) {
+      if (result != null) {
+        playerId = result;
+        _log("preious player exsit: $result");
+      } else {
+        playerId = _uuid.v4();
+        _log("preious player not exsit newId => $playerId");
+      }
+      players[playerId] = this;
+    });
   }
 
   Future<int> _invokeMethod(String method,
@@ -237,15 +251,15 @@ class AudioPlayer {
   }
 
   Future<void> setSpeed(double speed) {
-    return _invokeMethod('setSpeed', {'speed': speed,});
+    return _invokeMethod('setSpeed', {
+      'speed': speed,
+    });
   }
 
-
-  Future<bool> isSupportChangeSpeed() async{
-     Map<String, dynamic> withPlayerId = Map();
-     withPlayerId['playerId'] = playerId;
-     return _channel
-         .invokeMethod('isSupportChangeSpeed', withPlayerId);
+  Future<bool> isSupportChangeSpeed() async {
+    Map<String, dynamic> withPlayerId = Map();
+    withPlayerId['playerId'] = playerId;
+    return _channel.invokeMethod('isSupportChangeSpeed', withPlayerId);
   }
 
   static void _log(String param) {
@@ -262,14 +276,14 @@ class AudioPlayer {
     switch (call.method) {
       case 'audio.onDuration':
         if (value == -1) {
-          if(player.state != AudioPlayerState.PAUSED){
+          if (player.state != AudioPlayerState.PAUSED) {
             player.state = AudioPlayerState.PAUSED;
           }
         } else if (value == -2) {
           if (player.state != AudioPlayerState.PLAYING) {
             player.state = AudioPlayerState.PLAYING;
           }
-        }  else if (value == -3) {
+        } else if (value == -3) {
           if (player.state != AudioPlayerState.STOPPED) {
             player.state = AudioPlayerState.STOPPED;
           }

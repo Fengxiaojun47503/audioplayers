@@ -45,7 +45,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     private static Runnable sPositionUpdates;
     private static final Object sLock = new Object();
 
-    private static final Map<String, WrappedMediaPlayer> sMediaPlayers = new HashMap<>();
+    public static final Map<String, WrappedMediaPlayer> sMediaPlayers = new HashMap<>();
 
     public static WrappedMediaPlayer get(String playerId, AudioView audioView) {
         WrappedMediaPlayer player;

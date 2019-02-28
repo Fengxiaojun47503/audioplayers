@@ -3,6 +3,7 @@ package xyz.luan.audioplayers;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.text.TextUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -50,6 +51,16 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
     }
 
     private void handleMethodCall(final MethodCall call, final MethodChannel.Result response) {
+        if (TextUtils.equals("fetchExistPlayer", call.method)) {
+            String existPlayId = null;
+            for (Map.Entry<String, WrappedMediaPlayer> entry : WrappedMediaPlayer.sMediaPlayers.entrySet()) {
+                if(existPlayId == null){
+                    existPlayId = entry.getKey();
+                }
+            }
+            response.success(existPlayId);
+            return;
+        }
         final String playerId = call.argument("playerId");
         final WrappedMediaPlayer player = WrappedMediaPlayer.get(playerId, this);
         switch (call.method) {
@@ -109,7 +120,7 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
                 break;
             }
             case "isSupportChangeSpeed": {
-                 response.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M);
+                response.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M);
                 return;
             }
             default: {
@@ -167,7 +178,8 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
 
     @Override
     public void onSeekComplete(WrappedMediaPlayer player) {
-        channel.invokeMethod("audio.onSeekComplete", buildArguments(player.getPlayerId(), player.getCurrentPosition()));
+        channel.invokeMethod("audio.onSeekComplete", buildArguments(player.getPlayerId(),
+                player.getCurrentPosition()));
     }
 
     private static Map<String, Object> buildArguments(String playerId, Object value) {
