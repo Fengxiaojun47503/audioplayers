@@ -3,7 +3,9 @@ package xyz.luan.audioplayers;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Handler;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -51,20 +53,33 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
     }
 
     private void handleMethodCall(final MethodCall call, final MethodChannel.Result response) {
-        switch (call.method){
+        switch (call.method) {
             case "fetchExistPlayer":
                 String existPlayId = null;
-                for (Map.Entry<String, WrappedMediaPlayer> entry : WrappedMediaPlayer.sMediaPlayers.entrySet()) {
-                    if(existPlayId == null){
-                        existPlayId = entry.getKey();
+                for (Map.Entry<String, WrappedMediaPlayer> entry :
+                        WrappedMediaPlayer.sMediaPlayers.entrySet()) {
+                    existPlayId = entry.getKey();
+
+                    final WrappedMediaPlayer player = WrappedMediaPlayer.get(existPlayId, this);
+                    if (player.isPlaying()) {
+                        new Handler().postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                channel.invokeMethod("audio.onDuration",
+                                        buildArguments(player.getPlayerId(), STATE_PLAY));
+                            }
+                        }, 300);
                     }
+                    break;
                 }
                 response.success(existPlayId);
                 return;
             case "isSupportChangeSpeed":
-                response.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                        !TextUtils.equals(Build.VERSION.RELEASE, "6.0.1"));
+                response.success(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                        && !TextUtils.equals(Build.VERSION.RELEASE, "6.0.1"));
                 return;
+            default:
+                break;
         }
         final String playerId = call.argument("playerId");
         final WrappedMediaPlayer player = WrappedMediaPlayer.get(playerId, this);
@@ -142,8 +157,8 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
         channel.invokeMethod("audio.onDuration", buildArguments(player.getPlayerId(), STATE_PLAY));
         Context context = getApplicationContext();
         Intent intent = new Intent(AUDIO_SERVICE_ACTION)
-                .setPackage(context.getPackageName())
-                .putExtra(EXTRA_PLAYER_ID, player.getPlayerId());
+                                .setPackage(context.getPackageName())
+                                .putExtra(EXTRA_PLAYER_ID, player.getPlayerId());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent);
         } else {
@@ -162,8 +177,7 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
     }
 
     @Override
-    public void onSourceSet(WrappedMediaPlayer player, String source) {
-    }
+    public void onSourceSet(WrappedMediaPlayer player, String source) {}
 
     @Override
     public void onProgressUpdate(WrappedMediaPlayer player, int duration, int position) {
@@ -179,8 +193,8 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
 
     @Override
     public void onSeekComplete(WrappedMediaPlayer player) {
-        channel.invokeMethod("audio.onSeekComplete", buildArguments(player.getPlayerId(),
-                player.getCurrentPosition()));
+        channel.invokeMethod("audio.onSeekComplete",
+                buildArguments(player.getPlayerId(), player.getCurrentPosition()));
     }
 
     private static Map<String, Object> buildArguments(String playerId, Object value) {
