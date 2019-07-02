@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -181,6 +182,11 @@ class AudioPlayer {
     }
 
     return result;
+  }
+
+  /// 删除通知 只针对android
+  Future<void> deleteNotification() async {
+    Platform.isAndroid ? await _invokeMethod('deleteNotification') : null;
   }
 
   /// Pause the currently playing audio (resumes from this point).

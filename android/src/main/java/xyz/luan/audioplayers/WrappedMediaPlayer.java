@@ -52,14 +52,14 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         synchronized (sLock) {
             player = sMediaPlayers.get(playerId);
             if (null == player) {
-                if(sMediaPlayers.size() == 0){
+                if (sMediaPlayers.size() == 0) {
                     player = new WrappedMediaPlayer(audioView, playerId);
                 } else {
-                   for(Map.Entry<String, WrappedMediaPlayer> entry : sMediaPlayers.entrySet()){
-                       player =  sMediaPlayers.remove(entry.getKey());
-                       player.playerId = playerId;
-                       break;
-                   }
+                    for (Map.Entry<String, WrappedMediaPlayer> entry : sMediaPlayers.entrySet()) {
+                        player = sMediaPlayers.remove(entry.getKey());
+                        player.playerId = playerId;
+                        break;
+                    }
                 }
                 sMediaPlayers.put(playerId, player);
             } else {
@@ -97,6 +97,21 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
     private static void stopPositionUpdates() {
         sPositionUpdates = null;
         sHandler.removeCallbacksAndMessages(null);
+    }
+
+    public void onDeleteNotification() {
+        Set<AudioView> views;
+        synchronized (sLock) {
+            views = new HashSet<>(audioViews.keySet());
+        }
+
+        if (!views.isEmpty()) {
+            for (AudioView view : views) {
+                if (null != view) {
+                    view.onDeleteNotification(this);
+                }
+            }
+        }
     }
 
     private static final class UpdateCallback implements Runnable {
@@ -360,7 +375,7 @@ public class WrappedMediaPlayer implements MediaPlayer.OnPreparedListener,
         currentSpeed = speed;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (prepared) {
-                if(!isActuallyPlaying()){
+                if (!isActuallyPlaying()) {
                     playing = true;
                     Set<AudioView> views = new HashSet<>(audioViews.keySet());
                     if (!views.isEmpty()) {

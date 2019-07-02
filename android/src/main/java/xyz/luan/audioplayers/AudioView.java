@@ -18,4 +18,6 @@ public interface AudioView {
     void onProgressUpdate(WrappedMediaPlayer player, int duration, int position);
 
     void onSeekComplete(WrappedMediaPlayer player);
+
+    void onDeleteNotification(WrappedMediaPlayer player);
 }

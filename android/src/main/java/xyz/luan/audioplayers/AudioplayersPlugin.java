@@ -84,6 +84,9 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
         final String playerId = call.argument("playerId");
         final WrappedMediaPlayer player = WrappedMediaPlayer.get(playerId, this);
         switch (call.method) {
+            case "deleteNotification":
+                player.onDeleteNotification();
+                break;
             case "play": {
                 final String url = call.argument("url");
                 final double volume = call.argument("volume");
@@ -150,6 +153,11 @@ public class AudioplayersPlugin implements MethodCallHandler, AudioView {
     @Override
     public Context getApplicationContext() {
         return context;
+    }
+
+    @Override
+    public void onDeleteNotification(WrappedMediaPlayer player) {
+
     }
 
     @Override
