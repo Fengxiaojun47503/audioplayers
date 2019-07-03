@@ -186,7 +186,7 @@ class AudioPlayer {
 
   /// 删除通知 只针对android
   Future<void> deleteNotification() async {
-    Platform.isAndroid ? await _invokeMethod('deleteNotification') : null;
+    await _invokeMethod('deleteNotification');
   }
 
   /// Pause the currently playing audio (resumes from this point).
