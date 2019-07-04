@@ -275,22 +275,28 @@ class AudioPlayer {
   }
 
   static Future<void> platformCallHandler(MethodCall call) async {
-    _log('_platformCallHandler call ${call.method} ${call.arguments}');
+    debugPrint('_platformCallHandler call ${call.method} ${call.arguments}');
     String playerId = (call.arguments as Map)['playerId'];
     AudioPlayer player = players[playerId];
     dynamic value = (call.arguments as Map)['value'];
     switch (call.method) {
       case 'audio.onDuration':
         if (value == -1) {
+          debugPrint('准备修改 状态 PAUSED');
           if (player.state != AudioPlayerState.PAUSED) {
+            debugPrint('修改 状态 PAUSED');
             player.state = AudioPlayerState.PAUSED;
           }
         } else if (value == -2) {
+          debugPrint('准备修改 状态 PLAYING');
           if (player.state != AudioPlayerState.PLAYING) {
+            debugPrint('修改 状态 PLAYING');
             player.state = AudioPlayerState.PLAYING;
           }
         } else if (value == -3) {
+          debugPrint('准备修改 状态 STOPPED');
           if (player.state != AudioPlayerState.STOPPED) {
+            debugPrint('修改 状态 STOPPED');
             player.state = AudioPlayerState.STOPPED;
           }
         } else {
@@ -326,7 +332,7 @@ class AudioPlayer {
         }
         break;
       default:
-        _log('Unknowm method ${call.method} ');
+        debugPrint('Unknowm method ${call.method} ');
     }
   }
 }

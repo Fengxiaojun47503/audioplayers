@@ -4,6 +4,9 @@
 #import <AVFoundation/AVFoundation.h>
 #import <MediaPlayer/MediaPlayer.h>
 
+#define STATE_PAUSE -1
+#define STATE_PLAY -2
+#define STATE_STOP -3
 
 static NSString *const CHANNEL_NAME = @"xyz.luan/audioplayers";
 
@@ -11,6 +14,9 @@ static NSString *const CHANNEL_NAME = @"xyz.luan/audioplayers";
 static NSString *const PLAY_ID = @"ios_play_id";
 
 static NSMutableDictionary * players;
+
+
+
 
 @interface AudioplayersPlugin()
 -(void) pause: (NSString *) playerId;
@@ -28,6 +34,11 @@ static AudioplayersPlugin* instance;
     id _playTargetId;
     id _pauseTargetId;
     id _seekTargetId;
+    // 用来保存控制器数据内容
+    NSMutableDictionary *_dictPlayInfo;
+    double _startTime;
+    double _lastSaveTime;
+    int _state;
 }
 
 typedef void (^VoidCallback)(NSString * playerId);
@@ -73,7 +84,7 @@ FlutterMethodChannel *_channel_audioplayer;
                                   ^{
                                       // 删除通知
                                       if (_playTargetId) {
-                                          
+                                          _dictPlayInfo = nil;
                                           MPRemoteCommandCenter *commandCenter = [MPRemoteCommandCenter sharedCommandCenter];
                                           MPRemoteCommand *play = [commandCenter playCommand];
                                           [play setEnabled:NO];
@@ -84,13 +95,13 @@ FlutterMethodChannel *_channel_audioplayer;
                                           [pause setEnabled:NO];
                                           [pause removeTarget:_pauseTargetId];
                                           _pauseTargetId = nil;
-                                         
+                                          
                                           MPChangePlaybackPositionCommand *seek = [commandCenter changePlaybackPositionCommand];
-//                                          [seek setEnabled:NO];
+                                          //                                          [seek setEnabled:NO];
                                           [seek removeTarget:_seekTargetId];
                                           _seekTargetId = nil;
                                           
-//                                          [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
+                                          //                                          [[UIApplication sharedApplication] endReceivingRemoteControlEvents];
                                           [[MPNowPlayingInfoCenter defaultCenter] setNowPlayingInfo:nil];
                                       }
                                       
@@ -115,7 +126,8 @@ FlutterMethodChannel *_channel_audioplayer;
                                       NSLog(@"isLocal: %d %@",isLocal, call.arguments[@"isLocal"] );
                                       NSLog(@"volume: %f %@",volume, call.arguments[@"volume"] );
                                       NSLog(@"position: %f %@", seconds, call.arguments[@"positions"] );
-                                      
+                                      _startTime = seconds;
+                                      _lastSaveTime = _startTime;
                                       [self play:playerId url:url isLocal:isLocal volume:volume time:time];
                                       
                                   },
@@ -237,7 +249,7 @@ FlutterMethodChannel *_channel_audioplayer;
             // players[playerId] = playerInfo;
             
             // stream player position
-            CMTime interval = CMTimeMakeWithSeconds(0.2, NSEC_PER_SEC);
+            CMTime interval = CMTimeMakeWithSeconds(1, NSEC_PER_SEC);
             id timeObserver = [ player  addPeriodicTimeObserverForInterval: interval queue: nil usingBlock:^(CMTime time){
                 [self onTimeInterval:playerId time:time];
             }];
@@ -291,6 +303,9 @@ FlutterMethodChannel *_channel_audioplayer;
               [ player seekToTime:time ];
               [ player play];
               [ playerInfo setObject:@true forKey:@"isPlaying" ];
+              _state = STATE_PLAY;
+              [_channel_audioplayer invokeMethod:@"audio.onDuration" arguments:@{@"playerId": playerId, @"value": @(_state)}];
+              
               if ([_delegate respondsToSelector:@selector(getNovelInfoWithUrl:)]) {
                   [_delegate getNovelInfoWithUrl:url];
               }
@@ -309,16 +324,26 @@ FlutterMethodChannel *_channel_audioplayer;
         NSLog(@"ios -> invokechannel");
         int mseconds= CMTimeGetSeconds(duration)*1000;
         [_channel_audioplayer invokeMethod:@"audio.onDuration" arguments:@{@"playerId": playerId, @"value": @(mseconds)}];
+       
     }
 }
 
 // No need to spam the logs with every time interval update
 -(void) onTimeInterval: (NSString *) playerId
                   time: (CMTime) time {
-    // NSLog(@"ios -> onTimeInterval...");
+    
     int mseconds =  CMTimeGetSeconds(time)*1000;
+    _startTime = CMTimeGetSeconds(time);
+    NSLog(@"ios -> onTimeInterval... starTime : %fd lastTime : %fd", _startTime, _lastSaveTime);
+    if (_startTime - _lastSaveTime >= 5) {
+        _lastSaveTime = _startTime;
+        if ([_delegate respondsToSelector:@selector(saveTime:isComplete:)]) {
+            [_delegate saveTime:_startTime isComplete:false];
+        }
+    }
     // NSLog(@"asdff %@ - %d", playerId, mseconds);
     [_channel_audioplayer invokeMethod:@"audio.onCurrentPosition" arguments:@{@"playerId": playerId, @"value": @(mseconds)}];
+//    [_channel_audioplayer invokeMethod:@"audio.onDuration" arguments:@{@"playerId": playerId, @"value": @(_state)}];
     //    NSLog(@"asdff end");
 }
 
@@ -326,8 +351,15 @@ FlutterMethodChannel *_channel_audioplayer;
     NSMutableDictionary * playerInfo = players[playerId];
     AVPlayer *player = playerInfo[@"player"];
     
+    _startTime = player.currentTime.value / player.currentTime.timescale;
+    if(_dictPlayInfo) {
+        [_dictPlayInfo setObject:[NSNumber numberWithDouble:_startTime] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
+        [[MPNowPlayingInfoCenter defaultCenter] setNowPlayingInfo:_dictPlayInfo];
+    }
     [ player pause ];
     [playerInfo setObject:@false forKey:@"isPlaying"];
+    _state = STATE_PAUSE;
+    [_channel_audioplayer invokeMethod:@"audio.onDuration" arguments:@{@"playerId": playerId, @"value": @(_state)}];
 }
 
 -(void) resume: (NSString *) playerId {
@@ -335,6 +367,13 @@ FlutterMethodChannel *_channel_audioplayer;
     AVPlayer *player = playerInfo[@"player"];
     [player play];
     [playerInfo setObject:@true forKey:@"isPlaying"];
+    _startTime = player.currentTime.value / player.currentTime.timescale;
+    if(_dictPlayInfo) {
+        [_dictPlayInfo setObject:[NSNumber numberWithDouble:_startTime] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
+        [[MPNowPlayingInfoCenter defaultCenter] setNowPlayingInfo:_dictPlayInfo];
+    }
+    _state = STATE_PLAY;
+    [_channel_audioplayer invokeMethod:@"audio.onDuration" arguments:@{@"playerId": playerId, @"value": @(_state)}];
 }
 
 -(void) setVolume: (float) volume 
@@ -358,6 +397,8 @@ FlutterMethodChannel *_channel_audioplayer;
         [ self pause:playerId ];
         [ self seek:playerId time:CMTimeMake(0, 1) ];
         [playerInfo setObject:@false forKey:@"isPlaying"];
+        _state = STATE_STOP;
+        [_channel_audioplayer invokeMethod:@"audio.onDuration" arguments:@{@"playerId": playerId, @"value": @(_state)}];
     }
 }
 
@@ -366,12 +407,16 @@ FlutterMethodChannel *_channel_audioplayer;
     NSMutableDictionary * playerInfo = players[playerId];
     AVPlayer *player = playerInfo[@"player"];
     [[player currentItem] seekToTime:time];
+    [ _channel_audioplayer invokeMethod:@"audio.onSeekComplete" arguments:@{@"playerId": playerId, @"value": @(time.value / time.timescale * 1000)}];
+    
 }
 
 -(void) onSoundComplete: (NSString *) playerId {
     NSLog(@"ios -> onSoundComplete...");
     NSMutableDictionary * playerInfo = players[playerId];
-    
+    if ([_delegate respondsToSelector:@selector(saveTime:isComplete:)]) {
+        [_delegate saveTime:_startTime isComplete:true];
+    }
     if (![playerInfo[@"isPlaying"] boolValue]) {
         return;
     }
@@ -430,6 +475,16 @@ FlutterMethodChannel *_channel_audioplayer;
             [[NSNotificationCenter defaultCenter] removeObserver:ob];
     }
     players = nil;
+}
+
+- (void)setPlayControllDictionary:(NSMutableDictionary *)info {
+    _dictPlayInfo = info;
+    
+    //设置已经播放时长
+    [_dictPlayInfo setObject:[NSNumber numberWithDouble:_startTime] forKey:MPNowPlayingInfoPropertyElapsedPlaybackTime];
+    
+    [[MPNowPlayingInfoCenter defaultCenter] setNowPlayingInfo:_dictPlayInfo];
+    [self setMPRemoteCommandCenter];
 }
 
 - (void)setMPRemoteCommandCenter {
